@@ -116,4 +116,7 @@ dist
 # End of https://www.toptal.com/developers/gitignore/api/node
 
 .idea/
-lib/
+lib/**/*.test.js
+lib/**/*.test.d.ts
+
+*.local.ts
