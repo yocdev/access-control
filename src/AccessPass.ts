@@ -1,42 +1,28 @@
 import { difference } from 'lodash'
 import { Filter } from './filters'
 
-export enum CheckResult {
-  Deny = 'Deny',
-  Skip = 'Skip',
-  Pass = 'Pass'
-}
-
 export type AccessPassType = {
   name: string
   key: string
   filter: string
-  priority: number
-  checkResult: CheckResult
 }
 
-export abstract class AccessPass implements AccessPassType {
+export abstract class AccessPass<Request> implements AccessPassType {
   filter: string
 
   key: string
 
   name: string
-
-  priority: number
-
-  checkResult: CheckResult
 
   filters: Filter[] = []
 
   protected members: string[] = []
 
   constructor(initial: AccessPassType) {
-    const { filter, key, name, priority, checkResult } = initial
+    const { filter, key, name } = initial
     this.name = name
     this.filter = filter
     this.key = key
-    this.priority = priority
-    this.checkResult = checkResult
   }
 
   abstract updateMembers(): Promise<void>
@@ -73,19 +59,17 @@ export abstract class AccessPass implements AccessPassType {
     this.filters = filters
   }
 
-  async check(request: unknown): Promise<CheckResult> {
+  check(request: Request): Promise<boolean> {
     if (this.filters.length === 0) {
-      return CheckResult.Pass
+      return Promise.resolve(false)
     }
-    let value = request
+    let value: unknown = request
     for (const filter of this.filters) {
       value = filter.filter(value)
     }
     if (value) {
-      if (await this.hasMember(value as string)) {
-        return this.checkResult
-      }
+      return this.hasMember(value as string)
     }
-    return CheckResult.Pass
+    return Promise.resolve(false)
   }
 }

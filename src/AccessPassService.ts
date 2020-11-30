@@ -1,7 +1,8 @@
 import { orderBy } from 'lodash'
 
 import { Filter, JsonFilter, MatchFilter, ObjectPathFilter } from './filters'
-import { AccessPass, CheckResult } from './AccessPass'
+import { AccessPass } from './AccessPass'
+import { CheckResultHandler } from './CheckResultHandler'
 
 export type Filters = {
   [name: string]: new (args: string[]) => Filter
@@ -10,14 +11,28 @@ export type Filters = {
 type Options = {
   updateAccessPassesInterval: number
   updateAccessPassMembersInterval: number
+  updateCheckResultHandlersInterval: number
 }
 
-export abstract class AccessPassService {
+type LogFunction = (...args: unknown[]) => void
+
+export type Logger = {
+  trace: LogFunction
+  debug: LogFunction
+  info: LogFunction
+  warn: LogFunction
+  error: LogFunction
+  fatal: LogFunction
+}
+
+export abstract class AccessPassService<Request, Response> {
   abstract extensionFilters?: Filters
 
-  abstract logger: any
+  abstract logger: Logger
 
-  abstract onFetchAccessPasses(): Promise<AccessPass[]>
+  abstract getAccessPasses(): Promise<AccessPass<Request>[]>
+
+  abstract getCheckResultHandlers(): Promise<CheckResultHandler<Request, Response>[]>
 
   private defaultFilters = {
     json: JsonFilter,
@@ -25,7 +40,9 @@ export abstract class AccessPassService {
     get: ObjectPathFilter,
   }
 
-  accessPasses: AccessPass[] = []
+  accessPasses: AccessPass<Request>[] = []
+
+  checkResultHandlers: CheckResultHandler<Request, Response>[] = []
 
   private options: Options
 
@@ -78,8 +95,21 @@ export abstract class AccessPassService {
     }
   }
 
+  startUpdateCheckResultHandlers(): void {
+    if (this.stopped) {
+      return
+    }
+
+    this.updateCheckResultHandlers()
+    if (this.options.updateCheckResultHandlersInterval) {
+      setTimeout(() => {
+        this.startUpdateCheckResultHandlers()
+      }, this.options.updateCheckResultHandlersInterval)
+    }
+  }
+
   updateAccessPasses(): void {
-    this.onFetchAccessPasses()
+    this.getAccessPasses()
       .then(passes => {
         this.accessPasses = orderBy(passes, ['priority'], ['desc'])
         this.accessPasses.forEach(it => {
@@ -117,16 +147,32 @@ export abstract class AccessPassService {
     })
   }
 
-  async check(request: unknown): Promise<CheckResult> {
+  updateCheckResultHandlers(): void {
+    this.getCheckResultHandlers()
+      .then(handlers => {
+        this.checkResultHandlers = handlers
+      })
+      .catch(e => {
+        this.logger.error('update check result handlers error', e)
+      })
+  }
+
+  async check(request: Request, response: Response): Promise<boolean> {
+    const checkResult: { [key: string]: boolean } = {}
+    const checked: Promise<{ key: string, result: boolean}>[] = []
     for (const accessPass of this.accessPasses) {
-      const checkResult = await accessPass.check(request)
-      if (checkResult === CheckResult.Skip) {
-        return CheckResult.Skip
-      }
-      if (checkResult === CheckResult.Deny) {
-        return CheckResult.Deny
-      }
+      checked.push(accessPass.check(request).then(result => ({ key: accessPass.key, result })))
     }
-    return CheckResult.Pass
+    const results = await Promise.all(checked)
+    results.forEach(({ key, result }) => {
+      checkResult[key] = result
+    })
+
+    const handleResults: Promise<boolean>[] = []
+    for (const handler of this.checkResultHandlers) {
+      handleResults.push(handler.handle(request, response, checkResult))
+    }
+
+    return Promise.all(handleResults).then(it => it.some(Boolean))
   }
 }

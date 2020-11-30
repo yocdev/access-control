@@ -1,7 +1,7 @@
-import { AccessPass, CheckResult } from './AccessPass'
+import { AccessPass } from './AccessPass'
 import { JsonFilter, MatchFilter, ObjectPathFilter } from './filters'
 
-class AccessPassTest extends AccessPass {
+class AccessPassTest extends AccessPass<any> {
   updateMembers(): Promise<void> {
     this.members = ['1', '2', '3']
     return Promise.resolve()
@@ -9,15 +9,13 @@ class AccessPassTest extends AccessPass {
 }
 
 describe('AccessPass', () => {
-  let accessPass: AccessPass
+  let accessPass: AccessPass<any>
 
   beforeEach(() => {
     accessPass = new AccessPassTest({
       name: 'name',
       key: 'key',
       filter: 'get user.ip',
-      checkResult: CheckResult.Deny,
-      priority: 10,
     })
 
     accessPass.parseFilter({
@@ -32,8 +30,6 @@ describe('AccessPass', () => {
       expect(accessPass.name).toEqual('name')
       expect(accessPass.key).toEqual('key')
       expect(accessPass.filter).toEqual('get user.ip')
-      expect(accessPass.checkResult).toEqual(CheckResult.Deny)
-      expect(accessPass.priority).toEqual(10)
       expect(await accessPass.getMembers()).toEqual([])
     })
   })
@@ -44,14 +40,14 @@ describe('AccessPass', () => {
     })
 
     describe('当 value 是 member 时', () => {
-      it('returns accessPass.checkResult', async () => {
-        expect(await accessPass.check({ user: { ip: '1' } })).toEqual(accessPass.checkResult)
+      it('returns true', async () => {
+        expect(await accessPass.check({ user: { ip: '1' } })).toEqual(true)
       })
     })
 
     describe('当 value 不是 member 时', () => {
-      it('returns Pass', async () => {
-        expect(await accessPass.check({ user: { ip: 'not member' } })).toEqual(CheckResult.Pass)
+      it('returns false', async () => {
+        expect(await accessPass.check({ user: { ip: 'not member' } })).toEqual(false)
       })
     })
   })
@@ -76,7 +72,7 @@ describe('AccessPass', () => {
           },
         }),
       }
-      expect(await accessPass.check(request)).toEqual(accessPass.checkResult)
+      expect(await accessPass.check(request)).toEqual(true)
     })
   })
 
