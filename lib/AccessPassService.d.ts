@@ -1,18 +1,31 @@
 import { Filter } from './filters';
-import { AccessPass, CheckResult } from './AccessPass';
+import { AccessPass } from './AccessPass';
+import { CheckResultHandler } from './CheckResultHandler';
 export declare type Filters = {
     [name: string]: new (args: string[]) => Filter;
 };
 declare type Options = {
     updateAccessPassesInterval: number;
     updateAccessPassMembersInterval: number;
+    updateCheckResultHandlersInterval: number;
 };
-export declare abstract class AccessPassService {
+declare type LogFunction = (...args: unknown[]) => void;
+export declare type Logger = {
+    trace: LogFunction;
+    debug: LogFunction;
+    info: LogFunction;
+    warn: LogFunction;
+    error: LogFunction;
+    fatal: LogFunction;
+};
+export declare abstract class AccessPassService<Request, Response> {
     abstract extensionFilters?: Filters;
-    abstract logger: any;
-    abstract onFetchAccessPasses(): Promise<AccessPass[]>;
+    abstract logger: Logger;
+    abstract getAccessPasses(): Promise<AccessPass<Request>[]>;
+    abstract getCheckResultHandlers(): Promise<CheckResultHandler<Request, Response>[]>;
     private defaultFilters;
-    accessPasses: AccessPass[];
+    accessPasses: AccessPass<Request>[];
+    checkResultHandlers: CheckResultHandler<Request, Response>[];
     private options;
     private stopped;
     constructor(options: Options);
@@ -21,8 +34,10 @@ export declare abstract class AccessPassService {
     stop(): void;
     startUpdateAccessPasses(): void;
     startUpdateAccessPassMembers(): void;
+    startUpdateCheckResultHandlers(): void;
     updateAccessPasses(): void;
     updateAccessPassMembers(): void;
-    check(request: unknown): Promise<CheckResult>;
+    updateCheckResultHandlers(): void;
+    check(request: Request, response: Response): Promise<boolean>;
 }
 export {};
