@@ -16,23 +16,25 @@ class AccessPassTest extends AccessPass<Request> {
 class SyncAccessPassServiceTest extends AccessPassService<Request, Response> {
   extensionFilters?: Filters
 
-  fetchAccessPasses(): Promise<AccessPassType[]> {
-    return Promise.resolve([])
-  }
-
   getCheckResultHandlers(isAsync: boolean): Promise<CheckResultHandler<Request, Response>[]> {
     return Promise.resolve([])
   }
 
-  readonly isAsync: boolean = false
+  getAccessPasses(): Promise<AccessPass<Request>[]> {
+    return Promise.resolve([
+      new AccessPassTest({
+        filter: 'get name',
+        name: 'name',
+        key: 'test',
+      }),
+    ])
+  }
 
   logger: any = {
     error: jest.fn(),
   }
 
-  newAccessPass(accessPassInfo: AccessPassType, isAsync: boolean): AccessPass<Request> {
-    return new AccessPassTest(accessPassInfo, isAsync)
-  }
+  readonly isAsync: boolean = false
 }
 
 describe('SyncAccessPassService', () => {

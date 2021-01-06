@@ -18,15 +18,18 @@ export abstract class AccessPass<Request> implements AccessPassType {
 
   filters: Filter[] = []
 
-  readonly isAsync: boolean
+  protected isAsync = false
 
   protected members: string[] = []
 
-  constructor(initial: AccessPassType, isAsync: boolean) {
+  constructor(initial: AccessPassType) {
     const { filter, key, name } = initial
     this.name = name
     this.filter = filter
     this.key = key
+  }
+
+  setAsync(isAsync: boolean): void {
     this.isAsync = isAsync
   }
 

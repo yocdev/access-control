@@ -1,5 +1,5 @@
 import { Filter } from './filters';
-import { AccessPass, AccessPassType } from './AccessPass';
+import { AccessPass } from './AccessPass';
 import { CheckResultHandler } from './CheckResultHandler';
 export declare type Filters = {
     [name: string]: new (args: string[]) => Filter;
@@ -21,8 +21,7 @@ export declare type Logger = {
 export declare abstract class AccessPassService<Request, Response> {
     abstract extensionFilters?: Filters;
     abstract logger: Logger;
-    abstract fetchAccessPasses(): Promise<AccessPassType[]>;
-    abstract newAccessPass(accessPassInfo: AccessPassType, isAsync: boolean): AccessPass<Request>;
+    abstract getAccessPasses(): Promise<AccessPass<Request>[]>;
     abstract getCheckResultHandlers(isAsync: boolean): Promise<CheckResultHandler<Request, Response>[]>;
     abstract readonly isAsync: boolean;
     private defaultFilters;
@@ -31,7 +30,6 @@ export declare abstract class AccessPassService<Request, Response> {
     private options;
     private stopped;
     constructor(options: Options);
-    getAccessPasses(): Promise<AccessPass<Request>[]>;
     get filters(): Filters;
     start(): void;
     stop(): void;

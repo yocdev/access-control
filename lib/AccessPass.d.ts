@@ -10,9 +10,10 @@ export declare abstract class AccessPass<Request> implements AccessPassType {
     key: string;
     name: string;
     filters: Filter[];
-    readonly isAsync: boolean;
+    protected isAsync: boolean;
     protected members: string[];
-    constructor(initial: AccessPassType, isAsync: boolean);
+    constructor(initial: AccessPassType);
+    setAsync(isAsync: boolean): void;
     abstract updateMembers(): Promise<void>;
     getMembers(): PromiseOrValue<string[]>;
     hasMember(member: string): PromiseOrValue<boolean>;

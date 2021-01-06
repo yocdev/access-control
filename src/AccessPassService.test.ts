@@ -31,12 +31,8 @@ class AccessPassServiceTest extends AccessPassService<Request, Response> {
     return this.mockFetchCheckResultHandlers()
   }
 
-  fetchAccessPasses(): Promise<AccessPassType[]> {
+  getAccessPasses(): Promise<AccessPass<Request>[]> {
     return this.mockFetchAccessPasses()
-  }
-
-  newAccessPass(accessPassInfo: AccessPassType, isAsync: boolean): AccessPass<Request> {
-    return new AccessPassTest(accessPassInfo, isAsync)
   }
 
   getAccessPass(key: string): AccessPassTest {
@@ -62,8 +58,8 @@ describe('AccessPassService', () => {
   let request: Request
   let response: Response
 
-  let blackList: AccessPassType
-  let whiteList: AccessPassType
+  let blackList: AccessPassTest
+  let whiteList: AccessPassTest
 
   let handler1: CheckResultHandlerTest
   let handler2: CheckResultHandlerTest
@@ -75,17 +71,17 @@ describe('AccessPassService', () => {
       send: jest.fn(),
     }
 
-    blackList = {
+    blackList = new AccessPassTest({
       name: '黑名单',
       key: 'blackList',
       filter: 'get user.name',
-    }
+    })
 
-    whiteList = {
+    whiteList = new AccessPassTest({
       name: '白名单',
       key: 'whiteList',
       filter: 'get user.name',
-    }
+    })
 
     handler1 = new CheckResultHandlerTest()
     handler2 = new CheckResultHandlerTest()
@@ -117,8 +113,7 @@ describe('AccessPassService', () => {
 
       describe('当 AccessPass 包含 member 时', () => {
         beforeEach(done => {
-          const blackListAccessPass = service.getAccessPass(blackList.key)
-          blackListAccessPass.mockMembers.mockResolvedValue(['黑'])
+          blackList.mockMembers.mockResolvedValue(['黑'])
           service.updateAccessPassMembers()
 
           service.mockFetchCheckResultHandlers.mockResolvedValue([

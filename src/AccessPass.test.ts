@@ -16,7 +16,8 @@ describe('AccessPass', () => {
       name: 'name',
       key: 'key',
       filter: 'get user.ip',
-    }, true)
+    })
+    accessPass.setAsync(true)
 
     accessPass.parseFilter({
       json: JsonFilter,

@@ -30,9 +30,7 @@ export abstract class AccessPassService<Request, Response> {
 
   abstract logger: Logger
 
-  abstract fetchAccessPasses(): Promise<AccessPassType[]>
-
-  abstract newAccessPass(accessPassInfo: AccessPassType, isAsync: boolean): AccessPass<Request>
+  abstract getAccessPasses(): Promise<AccessPass<Request>[]>
 
   abstract getCheckResultHandlers(
     isAsync: boolean
@@ -56,11 +54,6 @@ export abstract class AccessPassService<Request, Response> {
 
   constructor(options: Options) {
     this.options = options
-  }
-
-  async getAccessPasses(): Promise<AccessPass<Request>[]> {
-    const accessInfos = await this.fetchAccessPasses()
-    return (accessInfos || []).map(info => this.newAccessPass(info, this.isAsync))
   }
 
   get filters(): Filters {
@@ -125,6 +118,8 @@ export abstract class AccessPassService<Request, Response> {
       .then(passes => {
         this.accessPasses = orderBy(passes, ['priority'], ['desc'])
         this.accessPasses.forEach(it => {
+          it.setAsync(this.isAsync)
+
           try {
             it.parseFilter(this.filters)
           } catch (e) {
