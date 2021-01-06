@@ -1,7 +1,7 @@
 import { orderBy } from 'lodash'
 
 import { Filter, JsonFilter, MatchFilter, ObjectPathFilter } from './filters'
-import { AccessPass } from './AccessPass'
+import { AccessPass, AccessPassType } from './AccessPass'
 import { CheckResultHandler } from './CheckResultHandler'
 
 export type Filters = {
@@ -30,9 +30,15 @@ export abstract class AccessPassService<Request, Response> {
 
   abstract logger: Logger
 
-  abstract getAccessPasses(): Promise<AccessPass<Request>[]>
+  abstract fetchAccessPasses(): Promise<AccessPassType[]>
 
-  abstract getCheckResultHandlers(): Promise<CheckResultHandler<Request, Response>[]>
+  abstract newAccessPass(accessPassInfo: AccessPassType, isAsync: boolean): AccessPass<Request>
+
+  abstract getCheckResultHandlers(
+    isAsync: boolean
+  ):Promise<CheckResultHandler<Request, Response>[]>
+
+  abstract readonly isAsync: boolean
 
   private defaultFilters = {
     json: JsonFilter,
@@ -52,6 +58,11 @@ export abstract class AccessPassService<Request, Response> {
     this.options = options
   }
 
+  async getAccessPasses(): Promise<AccessPass<Request>[]> {
+    const accessInfos = await this.fetchAccessPasses()
+    return (accessInfos || []).map(info => this.newAccessPass(info, this.isAsync))
+  }
+
   get filters(): Filters {
     return {
       ...this.defaultFilters,
@@ -63,6 +74,7 @@ export abstract class AccessPassService<Request, Response> {
     this.stopped = false
     this.startUpdateAccessPasses()
     this.startUpdateAccessPassMembers()
+    this.startUpdateCheckResultHandlers()
   }
 
   stop(): void {
@@ -148,7 +160,7 @@ export abstract class AccessPassService<Request, Response> {
   }
 
   updateCheckResultHandlers(): void {
-    this.getCheckResultHandlers()
+    this.getCheckResultHandlers(this.isAsync)
       .then(handlers => {
         this.checkResultHandlers = handlers
       })
@@ -157,22 +169,40 @@ export abstract class AccessPassService<Request, Response> {
       })
   }
 
-  async check(request: Request, response: Response): Promise<boolean> {
-    const checkResult: { [key: string]: boolean } = {}
-    const checked: Promise<{ key: string, result: boolean}>[] = []
-    for (const accessPass of this.accessPasses) {
-      checked.push(accessPass.check(request).then(result => ({ key: accessPass.key, result })))
+  check(request: Request, response: Response): Promise<boolean> | boolean {
+    if (this.isAsync) {
+      const checked: Promise<{ key: string, result: boolean}>[] = []
+      for (const accessPass of this.accessPasses) {
+        const checkResultPromise = accessPass.check(request) as Promise<boolean>
+        checked.push(checkResultPromise.then(result => ({ key: accessPass.key, result })))
+      }
+      return Promise.all(checked)
+        .then(results => {
+          const checkResult: { [key: string]: boolean } = {}
+          results.forEach(({ key, result }) => {
+            checkResult[key] = result
+          })
+          return checkResult
+        })
+        .then(checkResult => {
+          const handleResults: Promise<boolean>[] = []
+          for (const handler of this.checkResultHandlers) {
+            handleResults.push(handler.handle(request, response, checkResult) as Promise<boolean>)
+          }
+          return Promise.all(handleResults).then(it => it.some(Boolean))
+        })
+    } else {
+      const checkResult: { [key: string]: boolean } = {}
+      for (const accessPass of this.accessPasses) {
+        checkResult[accessPass.key] = accessPass.check(request) as boolean
+      }
+      for (const handler of this.checkResultHandlers) {
+        const handlerResult = handler.handle(request, response, checkResult) as boolean
+        if (handlerResult) {
+          return true
+        }
+      }
+      return false
     }
-    const results = await Promise.all(checked)
-    results.forEach(({ key, result }) => {
-      checkResult[key] = result
-    })
-
-    const handleResults: Promise<boolean>[] = []
-    for (const handler of this.checkResultHandlers) {
-      handleResults.push(handler.handle(request, response, checkResult))
-    }
-
-    return Promise.all(handleResults).then(it => it.some(Boolean))
   }
 }

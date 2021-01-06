@@ -7,6 +7,8 @@ export type AccessPassType = {
   filter: string
 }
 
+export type PromiseOrValue<T> = Promise<T> | T
+
 export abstract class AccessPass<Request> implements AccessPassType {
   filter: string
 
@@ -16,35 +18,50 @@ export abstract class AccessPass<Request> implements AccessPassType {
 
   filters: Filter[] = []
 
+  readonly isAsync: boolean
+
   protected members: string[] = []
 
-  constructor(initial: AccessPassType) {
+  constructor(initial: AccessPassType, isAsync: boolean) {
     const { filter, key, name } = initial
     this.name = name
     this.filter = filter
     this.key = key
+    this.isAsync = isAsync
   }
 
   abstract updateMembers(): Promise<void>
 
-  getMembers(): Promise<string[]> {
-    return Promise.resolve(this.members)
+  getMembers(): PromiseOrValue<string[]> {
+    if (this.isAsync) {
+      return Promise.resolve(this.members)
+    }
+    return this.members
   }
 
-  hasMember(member: string): Promise<boolean> {
-    return Promise.resolve(this.members.includes(member))
+  hasMember(member: string): PromiseOrValue<boolean> {
+    if (this.isAsync) {
+      return Promise.resolve(this.members.includes(member))
+    }
+    return this.members.includes(member)
   }
 
-  addMembers(members: string[]): Promise<void> {
+  addMembers(members: string[]): PromiseOrValue<void> {
     members.forEach(it => {
       this.members.push(it)
     })
-    return Promise.resolve()
+    if (this.isAsync) {
+      return Promise.resolve()
+    }
+    return undefined
   }
 
-  removeMembers(members: string[]): Promise<void> {
+  removeMembers(members: string[]): PromiseOrValue<void> {
     this.members = difference(this.members, members)
-    return Promise.resolve()
+    if (this.isAsync) {
+      return Promise.resolve()
+    }
+    return undefined
   }
 
   parseFilter(allFilters: { [name: string]: new (args: string[]) => Filter }): void {
@@ -59,9 +76,12 @@ export abstract class AccessPass<Request> implements AccessPassType {
     this.filters = filters
   }
 
-  check(request: Request): Promise<boolean> {
+  check(request: Request): PromiseOrValue<boolean> {
     if (this.filters.length === 0) {
-      return Promise.resolve(false)
+      if (this.isAsync) {
+        return Promise.resolve(false)
+      }
+      return false
     }
     let value: unknown = request
     for (const filter of this.filters) {
@@ -70,6 +90,9 @@ export abstract class AccessPass<Request> implements AccessPassType {
     if (value) {
       return this.hasMember(value as string)
     }
-    return Promise.resolve(false)
+    if (this.isAsync) {
+      return Promise.resolve(false)
+    }
+    return false
   }
 }

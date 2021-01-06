@@ -2,10 +2,12 @@ export type AccessPassResults = {
   [accessPassKey: string]: boolean
 }
 
-export abstract class CheckResultHandler<Request, Response> {
-  abstract handle(
+export interface CheckResultHandler<Request, Response> {
+  isAsync: boolean
+
+  handle(
     request: Request,
     response: Response,
     accessPassResults: AccessPassResults
-  ): Promise<boolean>
+  ): Promise<boolean> | boolean
 }

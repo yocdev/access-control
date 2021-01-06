@@ -1,7 +1,3 @@
 root: true
 extends:
-  - "plugin:@typescript-eslint/recommended"
-  - "yoc-node"
-parser: "@typescript-eslint/parser"
-plugins:
-  - "@typescript-eslint"
+  - "@yocdev/eslint-config-node"
