@@ -22,7 +22,7 @@ export declare abstract class AccessPassService<Request, Response> {
     abstract extensionFilters?: Filters;
     abstract logger: Logger;
     abstract getAccessPasses(): Promise<AccessPass<Request>[]>;
-    abstract getCheckResultHandlers(isAsync: boolean): Promise<CheckResultHandler<Request, Response>[]>;
+    abstract getCheckResultHandlers(): Promise<CheckResultHandler<Request, Response>[]>;
     abstract readonly isAsync: boolean;
     private defaultFilters;
     accessPasses: AccessPass<Request>[];

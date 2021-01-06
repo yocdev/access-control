@@ -41,7 +41,7 @@ class AccessPassServiceTest extends AccessPassService<Request, Response> {
 }
 
 
-class CheckResultHandlerTest implements CheckResultHandler<Request, Response> {
+class CheckResultHandlerTest extends CheckResultHandler<Request, Response> {
   mockHandle = jest.fn()
 
   handle(
@@ -49,8 +49,6 @@ class CheckResultHandlerTest implements CheckResultHandler<Request, Response> {
   ): Promise<boolean> | boolean {
     return this.mockHandle(request, response, accessPassResults)
   }
-
-  isAsync = true
 }
 
 describe('AccessPassService', () => {

@@ -32,9 +32,7 @@ export abstract class AccessPassService<Request, Response> {
 
   abstract getAccessPasses(): Promise<AccessPass<Request>[]>
 
-  abstract getCheckResultHandlers(
-    isAsync: boolean
-  ):Promise<CheckResultHandler<Request, Response>[]>
+  abstract getCheckResultHandlers(): Promise<CheckResultHandler<Request, Response>[]>
 
   abstract readonly isAsync: boolean
 
@@ -155,9 +153,10 @@ export abstract class AccessPassService<Request, Response> {
   }
 
   updateCheckResultHandlers(): void {
-    this.getCheckResultHandlers(this.isAsync)
+    this.getCheckResultHandlers()
       .then(handlers => {
         this.checkResultHandlers = handlers
+        this.checkResultHandlers.forEach(it => it.setAsync(this.isAsync))
       })
       .catch(e => {
         this.logger.error('update check result handlers error', e)

@@ -16,7 +16,7 @@ class AccessPassTest extends AccessPass<Request> {
 class SyncAccessPassServiceTest extends AccessPassService<Request, Response> {
   extensionFilters?: Filters
 
-  getCheckResultHandlers(isAsync: boolean): Promise<CheckResultHandler<Request, Response>[]> {
+  getCheckResultHandlers(): Promise<CheckResultHandler<Request, Response>[]> {
     return Promise.resolve([])
   }
 
